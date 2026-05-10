@@ -45,6 +45,9 @@ public:
 		return *this;
 	}
 
+	T& operator[](int index) {
+		return Array[index];
+	}
 
 	void AddEntry(const T& entry) {
 	
@@ -75,13 +78,25 @@ public:
 	~DynamicArray() {
 		delete[] Array;
 	}
-
-	T& operator[](int index) {
-		return Array[index];
-	}
-
-
 };
+
+
+//Using templates
+
+template<typename T>
+void custom_swap(T& a, T& b) {
+	T temp = a;
+	a = b;
+	b = temp;
+}
+
+//keep8ing the indexse in range
+template<typename T>
+const T& custom_clamp(const T& val, const T& min, const T& max) {
+	if (val < min) return min;
+	if (val > max) return max;
+	return val;
+}
 
 #endif // !DYNAMIC_ARRAY
 
