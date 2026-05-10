@@ -4,182 +4,172 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <cstdio> 
+#include <cstdio>
+#include <cstring>
 
 #include "DynamicArray_Holder.h"
 #include "Data.h"
 #include "Exceptions.h"
 
-
 class VaultManager {
 private:
-    DynamicArray<Vault_Record*> Entries_array; 
-    bool is_Unlocked;
+    DynamicArray<Vault_Record*> Entries_array;
+    bool        is_Unlocked;
     std::string Hashed_Master_Password;
     std::string Temp_Master_Key;
-    int failed_attempts = 0;
+    int         failed_attempts = 0;
 
-    // XOR CIPHERING the password
-    void encrypt_Decrypt(char* buffer_data, int Size, const std::string& key) {
-        int keyLen = key.length();
-
-        // division by zero
-        if (keyLen == 0)
-            return;
-
-        // XOR each entry
-        for (int i = 0; i < Size; i++) {
-            buffer_data[i] = buffer_data[i] ^ key[i % keyLen];
-        }
+    void encrypt_Decrypt(char* data, int size, const std::string& key) {
+        int keyLen = (int)key.length();
+        if (keyLen == 0) return;
+        for (int i = 0; i < size; i++)
+            data[i] ^= key[i % keyLen];
     }
 
 public:
-    // master user not logged in by default
-    VaultManager() {
-        is_Unlocked = false;
-    }
+    VaultManager() : is_Unlocked(false) {}
 
-    // creating initial vault and set password
     bool Create_Vault(const std::string& master_pass) {
-        // hashing master password
         Hashed_Master_Password = std::to_string(std::hash<std::string>{}(master_pass));
-
-        is_Unlocked = true;
         Temp_Master_Key = master_pass;
+        is_Unlocked = true;
         failed_attempts = 0;
         return true;
     }
 
+    void LoadHash() {
+        std::ifstream file("vault.dat", std::ios::binary);
+        if (!file.is_open()) return;
+
+        int hash_len = 0;
+        file.read(reinterpret_cast<char*>(&hash_len), sizeof(int));
+
+        if (hash_len <= 0 || hash_len > 512) return;
+
+        Hashed_Master_Password.resize(hash_len);
+        file.read(&Hashed_Master_Password[0], hash_len);
+    }
+
     bool Login(const std::string& input_pass) {
-        // hashing the input to check if it matches
         std::string input_hash = std::to_string(std::hash<std::string>{}(input_pass));
 
         if (input_hash == Hashed_Master_Password) {
             is_Unlocked = true;
-            Temp_Master_Key = input_pass; // saving key for XOR
-            failed_attempts = 0; 
+            Temp_Master_Key = input_pass;
+            failed_attempts = 0;
             return true;
         }
-        else {
-            failed_attempts++;
-            throw AuthException("CRITICAL: Incorrect Master Password!", failed_attempts);
-        }
+        failed_attempts++;
+        throw AuthException("CRITICAL: Incorrect Master Password!", failed_attempts);
     }
 
-    
     void Logout() {
+        // SYSTEMS FIX: We MUST save the data to the hard drive before we lock the vault 
+        // and wipe the key from RAM. If we don't, all new entries are lost.
+        SaveVault();
         is_Unlocked = false;
-        Temp_Master_Key = ""; 
+        Temp_Master_Key = "";
     }
 
-    // adds entry to the array
     void Add_Entry(Vault_Record* ptr) {
-        if (is_Unlocked == true) {
+        if (is_Unlocked)
             Entries_array.AddEntry(ptr);
-        }
     }
 
     void Delete_Entry(int index) {
-        if (is_Unlocked == true) {
-            int total_items = Entries_array.Get_Size();
-
-            if (index >= 0 && index < total_items) {
-                delete Entries_array[index];
-
-                Entries_array.RemoveEntry(index);
-            }
+        if (!is_Unlocked) return;
+        if (index >= 0 && index < Entries_array.Get_Size()) {
+            delete Entries_array[index];
+            Entries_array.RemoveEntry(index);
         }
     }
 
-    DynamicArray<Vault_Record*>& GetArray() {
-        return Entries_array;
-    }
+    DynamicArray<Vault_Record*>& GetArray() { return Entries_array; }
 
-    // saveing data to file
     void SaveVault() {
-        if (is_Unlocked == false)
-            return;
+        if (!is_Unlocked || Temp_Master_Key.empty()) return;
 
-        //temporary file 
-        std::fstream tempFile("temp.dat", std::ios::out | std::ios::binary);
-
-        int TotalItems = Entries_array.Get_Size();
-        //total size at top
-        tempFile.write(reinterpret_cast<char*>(&TotalItems), sizeof(int));
-
-        //serializing 
-        for (int i = 0; i < TotalItems; i++) {
-            Entries_array[i]->serialize(tempFile);
+        // 1. Serialize everything to a raw binary temp file to avoid stringstream corruption
+        std::ofstream tempOut("temp.dat", std::ios::binary | std::ios::trunc);
+        int total = Entries_array.Get_Size();
+        tempOut.write(reinterpret_cast<char*>(&total), sizeof(int));
+        for (int i = 0; i < total; i++) {
+            Entries_array[i]->serialize(tempOut);
         }
-        tempFile.close();
+        tempOut.close();
 
-        // encryption
-        std::fstream readTemp("temp.dat", std::ios::in | std::ios::binary | std::ios::ate);
-        int FileSize = readTemp.tellg();
-        readTemp.seekg(0, std::ios::beg);
+        // 2. Read the binary temp file into a raw char array
+        std::ifstream tempIn("temp.dat", std::ios::binary | std::ios::ate);
+        int dataSize = (int)tempIn.tellg();
+        tempIn.seekg(0);
 
-        char* FileBuffer = new char[FileSize];
-        readTemp.read(FileBuffer, FileSize);
-        readTemp.close();
+        char* buf = new char[dataSize];
+        tempIn.read(buf, dataSize);
+        tempIn.close();
 
-        // encrypting the buffer containing whole file
-        encrypt_Decrypt(FileBuffer, FileSize, Temp_Master_Key);
+        // 3. Encrypt the raw bytes
+        encrypt_Decrypt(buf, dataSize, Temp_Master_Key);
 
-        // writing encrypted buffer actual vault file
-        std::fstream finalFile("vault.dat", std::ios::out | std::ios::binary);
-        finalFile.write(FileBuffer, FileSize);
-        finalFile.close();
+        // 4. Write final vault.dat
+        std::ofstream out("vault.dat", std::ios::binary | std::ios::trunc);
+        int hash_len = (int)Hashed_Master_Password.length();
+        out.write(reinterpret_cast<char*>(&hash_len), sizeof(int));
+        out.write(Hashed_Master_Password.c_str(), hash_len);
+        out.write(buf, dataSize);
+        out.close();
 
-        delete[] FileBuffer;
+        // Wipe RAM and delete temp file
+        memset(buf, 0, dataSize);
+        delete[] buf;
         remove("temp.dat");
     }
 
     void LoadVault() {
-        std::fstream file("vault.dat", std::ios::in | std::ios::binary | std::ios::ate);
-        
-        // file doesnt exist yet
-        if (!file.is_open())
-            return; 
+        std::ifstream file("vault.dat", std::ios::binary | std::ios::ate);
+        if (!file.is_open()) return;
 
-        int FileSize = file.tellg();
-        file.seekg(0, std::ios::beg);
+        int totalSize = (int)file.tellg();
+        file.seekg(0);
 
-        //transfering whole encrypted file into buffer
-        char* buffer = new char[FileSize];
-        file.read(buffer, FileSize);
+        int hash_len = 0;
+        file.read(reinterpret_cast<char*>(&hash_len), sizeof(int));
+        file.seekg(sizeof(int) + hash_len);
+
+        int dataSize = totalSize - (int)sizeof(int) - hash_len;
+        if (dataSize <= 0) return;
+
+        char* buf = new char[dataSize];
+        file.read(buf, dataSize);
         file.close();
 
-        //decryption 
-        encrypt_Decrypt(buffer, FileSize, Temp_Master_Key);
+        // Decrypt in place
+        encrypt_Decrypt(buf, dataSize, Temp_Master_Key);
 
-        // writing decrypted data to temp file
-        std::fstream tempFile("temp.dat", std::ios::out | std::ios::binary);
-        tempFile.write(buffer, FileSize);
-        tempFile.close();
+        // Write decrypted bytes to temp.dat so we can safely deserialize
+        std::ofstream tempOut("temp.dat", std::ios::binary | std::ios::trunc);
+        tempOut.write(buf, dataSize);
+        tempOut.close();
 
-        memset(buffer, 0, FileSize);
-        delete[] buffer;
+        memset(buf, 0, dataSize);
+        delete[] buf;
 
-        std::fstream readTemp("temp.dat", std::ios::in | std::ios::binary);
+        // Rebuild objects from temp.dat
+        std::ifstream tempIn("temp.dat", std::ios::binary);
+        int total = 0;
+        tempIn.read(reinterpret_cast<char*>(&total), sizeof(int));
 
-        int TotalItems;
-        
-        readTemp.read(reinterpret_cast<char*>(&TotalItems), sizeof(int));
-
-        for (int i = 0; i < TotalItems; i++) {
-            Secure_String empty_str;
-            PasswordEntry* new_entry = new PasswordEntry("", "", "", empty_str);
-            new_entry->deserialize(readTemp);
-
-            Entries_array.AddEntry(new_entry);
+        for (int i = 0; i < total; i++) {
+            Secure_String empty;
+            PasswordEntry* entry = new PasswordEntry("", "", "", empty);
+            entry->deserialize(tempIn);
+            Entries_array.AddEntry(entry);
         }
-
-        readTemp.close();
-        remove("temp.dat"); 
+        tempIn.close();
+        remove("temp.dat");
     }
 
     ~VaultManager() {
-        for (int i = 0; i < Entries_array.Get_Size(); i++)  
+        for (int i = 0; i < Entries_array.Get_Size(); i++)
             delete Entries_array[i];
     }
 };
