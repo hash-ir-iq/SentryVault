@@ -2,6 +2,7 @@
 #define DYNAMIC_ARRAY
 
 #include<new>
+#include "Exceptions.h"
 
 template<typename T>
 class DynamicArray {
@@ -59,6 +60,16 @@ public:
 		Size++;
 	}
 
+	void RemoveEntry(int index) {
+		if (index < 0 || index >= Size) 
+			return;
+		
+		if (index != Size - 1)
+			custom_swap(Array[index], Array[Size - 1]);
+		
+		Size--;
+	}
+
 	void resize() {
 		T* temp = Array;
 		if (Capacity)
@@ -69,7 +80,7 @@ public:
 		Array = new(std::nothrow) T[Capacity];
 
 		if (Array == nullptr) {
-			throw MemoryException("MEMORY ALLOC ERROR: Heap allocation failed in DynamicArray.", Capacity * sizeof(T));
+			throw Bad_Alloc("MEMORY ALLOC ERROR: Heap allocation failed in DynamicArray.", Capacity * sizeof(T));
 		}
 
 		Copy_Data(temp, Size, Array);
