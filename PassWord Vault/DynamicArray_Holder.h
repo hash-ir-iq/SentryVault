@@ -1,6 +1,8 @@
 #ifndef DYNAMIC_ARRAY
 #define DYNAMIC_ARRAY
 
+#include<new>
+
 template<typename T>
 class DynamicArray {
 private:
@@ -63,7 +65,12 @@ public:
 			Capacity *= 2;
 		else
 			Capacity = 1;
-		Array = new T[Capacity];
+			
+		Array = new(std::nothrow) T[Capacity];
+
+		if (Array == nullptr) {
+			throw MemoryException("MEMORY ALLOC ERROR: Heap allocation failed in DynamicArray.", Capacity * sizeof(T));
+		}
 
 		Copy_Data(temp, Size, Array);
 		delete[] temp;
