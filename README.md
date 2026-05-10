@@ -2,7 +2,7 @@
 
 A local, offline password manager built from scratch in C++. 
 
-This project was developed as a 2nd-semester systems programming and OOP assignment for FAST NUCES. The primary constraint was to build the entire backend architecture **without using the C++ Standard Template Library (STL)**. No `<vector>`, no `<string>`, and no built-in memory management tools were allowed.
+This project was developed as a 2nd-semester OOP Project for FAST NUCES. The primary constraint was to build the entire backend architecture **without using the C++ Standard Template Library (STL)**. No `<vector>`, no `<stl>` and no built-in memory management tools were allowed.
 
 ## Features
 - **Master Password Authentication:** Locks the vault and generates the key for encryption.
