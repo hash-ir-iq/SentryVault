@@ -36,11 +36,11 @@ public:
 
 };
 
-class MemoryException : public GeneralException {
+class Bad_Alloc : public GeneralException {
 private:
 	int Failed_Size_Allocation;
 public:
-	MemoryException(const std::string& errorText, int sizeToAllocate)
+	Bad_Alloc(const std::string& errorText, int sizeToAllocate)
 		: GeneralException(errorText), Failed_Size_Allocation(sizeToAllocate) { };
 
 	int getFailedSize() { 
