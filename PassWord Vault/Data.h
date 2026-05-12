@@ -1,29 +1,43 @@
-#ifndef DATA
-#define DATA
+#ifndef DATA_H
+#define DATA_H
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include "PasswordString.h"
 
+// ---------------------------------------------------------
+// Abstract Base Class
+// ---------------------------------------------------------
 class Vault_Record {
 public:
-    virtual std::string Get_Title() = 0;
-    virtual std::string Get_Username() = 0;
-    virtual std::string Get_URL() = 0;
+    virtual std::string Get_Title() const = 0;
+    virtual std::string Get_Username() const = 0;
+    virtual std::string Get_URL() const = 0;
 
     virtual void displayInfo() const = 0;
 
-    // std::ostream / std::istream so ANY stream works:
-    // fstream, ofstream, ostringstream, istringstream - all compatible.
     virtual void serialize(std::ostream& file) = 0;
     virtual void deserialize(std::istream& file) = 0;
 
+    // OOP REQUIREMENT: Overloaded == for duplicate checking
+    virtual bool operator==(const Vault_Record& other) const = 0;
+
+    // OOP FLEX: Polymorphic Type ID for Factory Loading
+    virtual int Get_Type() const = 0;
+
     virtual ~Vault_Record() {};
+
+    // OOP REQUIREMENT: Overloaded << for formatted output
+    friend std::ostream& operator<<(std::ostream& os, const Vault_Record& record) {
+        record.displayInfo();
+        return os;
+    }
 };
 
-
+// ---------------------------------------------------------
+// Child Class 1: PasswordEntry (Type 1)
+// ---------------------------------------------------------
 class PasswordEntry : public Vault_Record {
 private:
     std::string   title;
@@ -32,68 +46,47 @@ private:
     std::string   URL;
 
 public:
-    PasswordEntry(const std::string& t, const std::string& u_name,
-        const std::string& url, const Secure_String& p)
-        : title(t), username(u_name), URL(url), password(p) {
-    }
+    PasswordEntry(const std::string& t, const std::string& u_name, const std::string& url, const Secure_String& p);
 
-    std::string Get_Title()    override { return title; }
-    std::string Get_Username() override { return username; }
-    std::string Get_URL()      override { return URL; }
+    std::string Get_Title() const override;
+    std::string Get_Username() const override;
+    std::string Get_URL() const override;
+    Secure_String Get_Password() const;
 
-    Secure_String Get_Password() { return password; }
+    void displayInfo() const override;
+    void serialize(std::ostream& file) override;
+    void deserialize(std::istream& file) override;
 
-    void displayInfo() const override {
-        std::cout << "Title: " << title << std::endl;
-        std::cout << "Username: " << username << std::endl;
-        std::cout << "URL: " << URL << std::endl;
-    }
+    bool operator==(const Vault_Record& other) const override;
 
-    void serialize(std::ostream& file) override {
-        int len;
-
-        len = (int)title.length();
-        file.write(reinterpret_cast<char*>(&len), sizeof(int));
-        file.write(title.c_str(), len);
-
-        len = (int)username.length();
-        file.write(reinterpret_cast<char*>(&len), sizeof(int));
-        file.write(username.c_str(), len);
-
-        len = (int)URL.length();
-        file.write(reinterpret_cast<char*>(&len), sizeof(int));
-        file.write(URL.c_str(), len);
-
-        len = password.Size_Getter();
-        file.write(reinterpret_cast<char*>(&len), sizeof(int));
-        file.write(password.Get_SecureString_Ptr(), len);
-    }
-
-    void deserialize(std::istream& file) override {
-        int len;
-
-        file.read(reinterpret_cast<char*>(&len), sizeof(int));
-        title.resize(len);
-        file.read(&title[0], len);
-
-        file.read(reinterpret_cast<char*>(&len), sizeof(int));
-        username.resize(len);
-        file.read(&username[0], len);
-
-        file.read(reinterpret_cast<char*>(&len), sizeof(int));
-        URL.resize(len);
-        file.read(&URL[0], len);
-
-        file.read(reinterpret_cast<char*>(&len), sizeof(int));
-        char* temp_buffer = new char[len + 1];
-        file.read(temp_buffer, len);
-        temp_buffer[len] = '\0';
-
-        password = Secure_String(temp_buffer, len);
-
-        memset(temp_buffer, 0, len + 1);
-        delete[] temp_buffer;
-    }
+    // Returns 1 so LoadVault knows this is a Password
+    int Get_Type() const override { return 1; }
 };
 
-#endif // !DATA
+// ---------------------------------------------------------
+// Child Class 2: SecureNote (Type 2)
+// ---------------------------------------------------------
+class SecureNote : public Vault_Record {
+private:
+    std::string title;
+    std::string content;
+
+public:
+    SecureNote(const std::string& t, const std::string& c);
+
+    std::string Get_Title() const override;
+    std::string Get_Username() const override;
+    std::string Get_URL() const override;
+    std::string Get_Content() const;
+
+    void displayInfo() const override;
+    void serialize(std::ostream& file) override;
+    void deserialize(std::istream& file) override;
+
+    bool operator==(const Vault_Record& other) const override;
+
+    // Returns 2 so LoadVault knows this is a Note
+    int Get_Type() const override { return 2; }
+};
+
+#endif // !DATA_H

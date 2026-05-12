@@ -1,51 +1,51 @@
-#ifndef EXCEPTIONS
-#define EXCEPTIONS
+#ifndef EXCEPTIONS_H
+#define EXCEPTIONS_H
 
+#include <cstring>
+#include <iostream>
+#include <string>
 
-#include<cstring>
-#include<iostream>
-
-class GeneralException
-{
+class VaultException {
 protected:
-	std::string message;
-	
+    std::string message;
 public:
-	
-	GeneralException(const std::string& mes) :message(mes) {};
-
-	virtual const char* what() const noexcept {
-		return &message[0];
-	}
-
-	virtual ~GeneralException() {};
-
+    VaultException(const std::string& mes) : message(mes) {}
+    virtual const char* what() const noexcept { 
+        return message.c_str();
+    }
+    virtual ~VaultException() {}
 };
 
-
-class AuthException : public GeneralException 
-{
+class AuthException : public VaultException {
 private:
-	int attempts;
+    int attempts;
 public:
-	AuthException(const std::string& mes, int attempt) : GeneralException(mes) , attempts(attempt){};
-
-	int Get_Attempts() {
-		return attempts;
-	}
-
+    AuthException(const std::string& mes, int attempt) : VaultException(mes), attempts(attempt) {}
+    int Get_Attempts() const {
+        return attempts; 
+    }
 };
 
-class Bad_Alloc : public GeneralException {
+class Bad_Alloc : public VaultException {
 private:
-	int Failed_Size_Allocation;
+    int Failed_Size_Allocation;
 public:
-	Bad_Alloc(const std::string& errorText, int sizeToAllocate)
-		: GeneralException(errorText), Failed_Size_Allocation(sizeToAllocate) { };
-
-	int getFailedSize() { 
-		return Failed_Size_Allocation; 
-	}
+    Bad_Alloc(const std::string& errorText, int sizeToAllocate)
+        : VaultException(errorText), Failed_Size_Allocation(sizeToAllocate) {
+    }
+    int getFailedSize() const {
+        return Failed_Size_Allocation; 
+    }
 };
 
-#endif // !EXCEPTIONS
+class DuplicateEntryException : public VaultException {
+public:
+    DuplicateEntryException(const std::string& mes) : VaultException(mes) {}
+};
+
+class ValidationException : public VaultException {
+public:
+    ValidationException(const std::string& mes) : VaultException(mes) {}
+};
+
+#endif // !EXCEPTIONS_H
