@@ -6,9 +6,7 @@
 #include <string>
 #include "PasswordString.h"
 
-// ---------------------------------------------------------
-// Abstract Base Class
-// ---------------------------------------------------------
+
 class Vault_Record {
 public:
     virtual std::string Get_Title() const = 0;
@@ -20,24 +18,22 @@ public:
     virtual void serialize(std::ostream& file) = 0;
     virtual void deserialize(std::istream& file) = 0;
 
-    // OOP REQUIREMENT: Overloaded == for duplicate checking
+    //overloaded == for duplicate checking
     virtual bool operator==(const Vault_Record& other) const = 0;
 
-    // OOP FLEX: Polymorphic Type ID for Factory Loading
+    //polymorphic Type ID for Factory Loading
     virtual int Get_Type() const = 0;
 
     virtual ~Vault_Record() {};
 
-    // OOP REQUIREMENT: Overloaded << for formatted output
+    //overloaded << for formatted output
     friend std::ostream& operator<<(std::ostream& os, const Vault_Record& record) {
         record.displayInfo();
         return os;
     }
 };
 
-// ---------------------------------------------------------
-// Child Class 1: PasswordEntry (Type 1)
-// ---------------------------------------------------------
+
 class PasswordEntry : public Vault_Record {
 private:
     std::string   title;
@@ -59,13 +55,17 @@ public:
 
     bool operator==(const Vault_Record& other) const override;
 
-    // Returns 1 so LoadVault knows this is a Password
-    int Get_Type() const override { return 1; }
+    //returns 1 so LoadVault knws its Password
+    int Get_Type() const override { 
+        return 1; 
+    }
 };
 
-// ---------------------------------------------------------
-// Child Class 2: SecureNote (Type 2)
-// ---------------------------------------------------------
+
+// Child Class 2
+// SecureNote (Type 2)
+
+
 class SecureNote : public Vault_Record {
 private:
     std::string title;
@@ -85,8 +85,10 @@ public:
 
     bool operator==(const Vault_Record& other) const override;
 
-    // Returns 2 so LoadVault knows this is a Note
-    int Get_Type() const override { return 2; }
+    //returning 2 so LoadVault knows this is  Note
+    int Get_Type() const override { 
+        return 2; 
+    }
 };
 
 #endif // !DATA_H

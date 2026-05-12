@@ -8,9 +8,7 @@
 #include "VaultManager.h"
 #include "Exceptions.h"
 
-// -----------------------------------------------------------------------
-// HELPER FUNCTION: Word Wrapper
-// -----------------------------------------------------------------------
+
 std::string WrapText(const std::string& text, int max_chars, int& line_count) {
     std::string wrapped = "";
     int current_len = 0;
@@ -62,9 +60,7 @@ int main() {
     if (vault_exists)
         MyVault.LoadHash();
 
-    // ---------------------------------------------------------
-    // HARDWARE TARGET: Lenovo L470 Native (1366 x 768)
-    // ---------------------------------------------------------
+
     InitWindow(1366, 768, "Secure Password Vault");
     SetTargetFPS(60);
 
@@ -107,7 +103,7 @@ int main() {
         switch (current_screen) {
 
         case SCREEN_SETUP: {
-            // Re-centered for 1366 width
+
             DrawText("First-Time Setup", 530, 150, 30, DARKBLUE);
             DrawText("Choose a master password for your vault.", 440, 200, 18, DARKGRAY);
 
@@ -123,8 +119,10 @@ int main() {
                 std::string p1(setup_pass_buf);
                 std::string p2(setup_confirm_buf);
 
-                if (p1.empty()) setup_error = "Password cannot be empty.";
-                else if (p1 != p2) setup_error = "Passwords do not match.";
+                if (p1.empty()) 
+                    setup_error = "Password cannot be empty.";
+                else if (p1 != p2) 
+                    setup_error = "Passwords do not match.";
                 else {
                     MyVault.Create_Vault(p1);
                     MyVault.SaveVault();
@@ -143,7 +141,6 @@ int main() {
         }
 
         case SCREEN_LOGIN: {
-            // Re-centered for 1366 width
             DrawText("Secure Vault Login", 530, 200, 30, DARKGRAY);
 
             if (GuiTextBox(Rectangle{ 530.0f, 300.0f, 300.0f, 40.0f }, login_pass_buffer, 128, is_pass_box_active))
@@ -174,7 +171,6 @@ int main() {
         case SCREEN_DASHBOARD: {
             DrawText("Vault Dashboard", 50, 30, 30, DARKBLUE);
 
-            // Shifted completely to the right edge
             if (GuiButton(Rectangle{ 1210.0f, 30.0f, 100.0f, 30.0f }, "Logout")) {
                 MyVault.Logout();
                 current_screen = SCREEN_LOGIN;
@@ -191,7 +187,6 @@ int main() {
             DrawText("Username", 200, 130, 18, BLACK);
             DrawText("URL / Content", 380, 130, 18, BLACK);
 
-            // Stretched the header line across the 1366 display
             DrawLine(50, 152, 1310, 152, GRAY);
 
             DynamicArray<Vault_Record*>& arr = MyVault.GetArray();
@@ -219,7 +214,6 @@ int main() {
                         SecureNote* sn = dynamic_cast<SecureNote*>(arr[i]);
 
                         int lines = 1;
-                        // Increased word wrap capacity to 90 characters for the wider screen
                         std::string wrapped = WrapText(sn->Get_Content(), 65, lines);
 
                         DrawText(wrapped.c_str(), 380, y_pos, 18, RED);
@@ -238,7 +232,6 @@ int main() {
                     }
                 }
 
-                // Buttons anchored to the new 1366 right edge
                 if (GuiButton(Rectangle{ 1110.0f, (float)y_pos - 4, 72.0f, 24.0f }, "View")) {
                     item_to_show = (item_to_show == i) ? -1 : i;
                 }
@@ -266,17 +259,19 @@ int main() {
 
             if (!is_secure_note) {
                 DrawText("Username:", 50, 170, 20, BLACK);
-                if (GuiTextBox(Rectangle{ 150.0f, 165.0f, 300.0f, 30.0f }, user_buf, 128, user_active)) user_active = !user_active;
+                if (GuiTextBox(Rectangle{ 150.0f, 165.0f, 300.0f, 30.0f }, user_buf, 128, user_active))
+                    user_active = !user_active;
 
                 DrawText("URL:", 50, 220, 20, BLACK);
-                if (GuiTextBox(Rectangle{ 150.0f, 215.0f, 300.0f, 30.0f }, url_buf, 128, url_active)) url_active = !url_active;
+                if (GuiTextBox(Rectangle{ 150.0f, 215.0f, 300.0f, 30.0f }, url_buf, 128, url_active))
+                    url_active = !url_active;
 
                 DrawText("Password:", 50, 270, 20, BLACK);
-                if (GuiTextBox(Rectangle{ 150.0f, 265.0f, 300.0f, 30.0f }, Pass_buf, 128, Pass_active)) Pass_active = !Pass_active;
+                if (GuiTextBox(Rectangle{ 150.0f, 265.0f, 300.0f, 30.0f }, Pass_buf, 128, Pass_active))
+                    Pass_active = !Pass_active;
             }
             else {
                 DrawText("Content:", 50, 170, 20, BLACK);
-                // Stretched the Secure Note text box significantly to use the new screen real estate
                 if (GuiTextBox(Rectangle{ 150.0f, 165.0f, 800.0f, 120.0f }, content_buf, 512, content_active))
                     content_active = !content_active;
             }
@@ -322,7 +317,7 @@ int main() {
             break;
         }
 
-        } // end switch
+        } 
 
         EndDrawing();
     }

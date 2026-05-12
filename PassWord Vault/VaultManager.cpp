@@ -66,7 +66,8 @@ void VaultManager::Logout() {
 
 
 void VaultManager::Add_Entry(Vault_Record* ptr) {
-    if (!is_Unlocked) return;
+    if (!is_Unlocked)
+        return;
 
     
     for (int i = 0; i < Entries_array.Get_Size(); i++) {
@@ -94,15 +95,16 @@ DynamicArray<Vault_Record*>& VaultManager::GetArray() {
 }
 
 void VaultManager::SaveVault() {
-    if (!is_Unlocked || Temp_Master_Key.empty()) return;
+    if (!is_Unlocked || Temp_Master_Key.empty())
+        return;
 
     std::ofstream tempOut("temp.dat", std::ios::binary | std::ios::trunc);
     int total = Entries_array.Get_Size();
     tempOut.write(reinterpret_cast<char*>(&total), sizeof(int));
 
     for (int i = 0; i < total; i++) {
-        // OOP FLEX: Polymorphic Type ID Writing
-        // Write the ID (1 for Password, 2 for Note) BEFORE writing the data
+
+        // Writing ID (1 for Password, 2 for Note) BEFORE writing the data
         int type = Entries_array[i]->Get_Type();
         tempOut.write(reinterpret_cast<char*>(&type), sizeof(int));
 
@@ -135,7 +137,8 @@ void VaultManager::SaveVault() {
 
 void VaultManager::LoadVault() {
     std::ifstream file("vault.dat", std::ios::binary | std::ios::ate);
-    if (!file.is_open()) return;
+    if (!file.is_open())
+        return;
 
     int totalSize = (int)file.tellg();
     file.seekg(0);
@@ -145,7 +148,8 @@ void VaultManager::LoadVault() {
     file.seekg(sizeof(int) + hash_len);
 
     int dataSize = totalSize - (int)sizeof(int) - hash_len;
-    if (dataSize <= 0) return;
+    if (dataSize <= 0)
+        return;
 
     char* buf = new char[dataSize];
     file.read(buf, dataSize);
@@ -165,8 +169,7 @@ void VaultManager::LoadVault() {
     tempIn.read(reinterpret_cast<char*>(&total), sizeof(int));
 
     for (int i = 0; i < total; i++) {
-        // OOP FLEX: Polymorphic Factory Loading
-        // Read the type ID first to know what object to construct
+        //read the type ID first to know what object to construct
         int type = 0;
         tempIn.read(reinterpret_cast<char*>(&type), sizeof(int));
 

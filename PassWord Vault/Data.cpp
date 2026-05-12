@@ -1,29 +1,36 @@
 #include "Data.h"
 
-    
+
+// CHILD CLASS 1
+// Password Implementation
+
 PasswordEntry::PasswordEntry(const std::string& t, const std::string& u_name, const std::string& url, const Secure_String& p)
     : title(t), username(u_name), URL(url), password(p) {
 }
 
-std::string PasswordEntry::Get_Title() const { return title; }
-std::string PasswordEntry::Get_Username() const { return username; }
-std::string PasswordEntry::Get_URL() const { return URL; }
-Secure_String PasswordEntry::Get_Password() const { return password; }
+std::string PasswordEntry::Get_Title() const {
+    return title; 
+}
+std::string PasswordEntry::Get_Username() const { 
+    return username; 
+}
+std::string PasswordEntry::Get_URL() const { 
+    return URL;
+}
+Secure_String PasswordEntry::Get_Password() const {
+    return password; 
+}
 
 void PasswordEntry::displayInfo() const {
-    std::cout << "Title: " << title << "\n";
-    std::cout << "Username: " << username << "\n";
-    std::cout << "URL: " << URL << "\n";
+    std::cout << "Title: " << title << std::endl;
+    std::cout << "Username: " << username << std::endl;
+    std::cout << "URL: " << URL << std::endl;
 }
 
-// ------------------------------------------------------------------
-// THIS FIXES YOUR ERROR: Operator == Implementation
-// ------------------------------------------------------------------
 bool PasswordEntry::operator==(const Vault_Record& other) const {
-    // Strict Title match. If the Title already exists, block it.
+    //if the Title already exists, block it.
     return (this->title == other.Get_Title());
 }
-
 
 void PasswordEntry::serialize(std::ostream& file) {
     int len;
@@ -73,23 +80,28 @@ void PasswordEntry::deserialize(std::istream& file) {
 }
 
 
-// ==================================================================
-// CHILD CLASS 2: SecureNote Implementation
-// ==================================================================
+// CHILD CLASS 2
+// SecureNote Implementation
 
-// Constructor
 SecureNote::SecureNote(const std::string& t, const std::string& c)
-    : title(t), content(c) {
+    : title(t), content(c) {}
+
+
+std::string SecureNote::Get_Title() const { 
+    return title; 
 }
 
-// Getters
-std::string SecureNote::Get_Title() const { return title; }
+//note dosnt have a username or URL, so return empty strings
+std::string SecureNote::Get_Username() const { 
+    return ""; 
+}
+std::string SecureNote::Get_URL() const { 
+    return ""; 
+}
 
-// A note doesn't have a username or URL, so we return empty strings
-std::string SecureNote::Get_Username() const { return ""; }
-std::string SecureNote::Get_URL() const { return ""; }
-
-std::string SecureNote::Get_Content() const { return content; }
+std::string SecureNote::Get_Content() const {
+    return content; 
+}
 
 // Display
 void SecureNote::displayInfo() const {
@@ -105,31 +117,31 @@ bool SecureNote::operator==(const Vault_Record& other) const {
     return (this->title == other.Get_Title());
 }
 
-// Binary Serialization
+//binary Serialization
 void SecureNote::serialize(std::ostream& file) {
     int len;
 
-    // Write Title
+    //write title
     len = (int)title.length();
     file.write(reinterpret_cast<char*>(&len), sizeof(int));
     file.write(title.c_str(), len);
 
-    // Write Content
+    //write contetn
     len = (int)content.length();
     file.write(reinterpret_cast<char*>(&len), sizeof(int));
     file.write(content.c_str(), len);
 }
 
-// Binary Deserialization
+//binary Deserialization
 void SecureNote::deserialize(std::istream& file) {
     int len;
 
-    // Read Title
+    //read Title
     file.read(reinterpret_cast<char*>(&len), sizeof(int));
     title.resize(len);
     file.read(&title[0], len);
 
-    // Read Content
+    //read Content
     file.read(reinterpret_cast<char*>(&len), sizeof(int));
     content.resize(len);
     file.read(&content[0], len);
