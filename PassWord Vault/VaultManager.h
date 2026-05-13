@@ -1,9 +1,10 @@
 #ifndef VAULTMANAGER_H
 #define VAULTMANAGER_H
-
 #include <string>
 #include "DynamicArray_Holder.h"
-#include "Data.h"
+#include "Vault_Record.h"
+#include "PasswordEntry.h"
+#include "SecureNote.h"
 
 class VaultManager {
 private:
