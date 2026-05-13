@@ -1,42 +1,52 @@
-# Secure Password Vault
+# Secure Password Vault (Multi-Tenant)
 
-A local, offline password manager built from scratch in C++. 
+A locally encrypted, multi-user password and secure note manager built entirely in C++. 
 
-This project was developed as a 2nd-semester OOP Project for FAST NUCES. The primary constraint was to build the entire backend architecture **without using the C++ Standard Template Library (STL)**. No `<vector>`, no `<stl>` and no built-in memory management tools were allowed.
+This project was engineered to demonstrate strict systems-level C++ architecture. It intentionally bypasses the Standard Template Library (STL) to implement manual heap memory management, custom template data structures, and polymorphic binary serialization. The graphical user interface is powered by Raylib.
 
-## Features
-- **Master Password Authentication:** Locks the vault and generates the key for encryption.
-- **Offline Storage:** Passwords are saved locally; no cloud or external APIs are used.
-- **View & Delete:** Easily add, view, and remove saved credentials from the dashboard.
-- **Graphical Interface:** Built using [Raylib](https://www.raylib.com/) and `raygui` for a simple, memory-safe UI.
+## Core Architectural Features
 
-## Under the Hood (Technical Details)
-Since STL was banned for this project, the core data structures and security measures were built manually:
-- **Custom `DynamicArray`:** A templated, auto-resizing array that handles heap allocations. Deletions use an $O(1)$ swap-and-shrink method to avoid $O(N)$ array shifting.
-- **Custom `Secure_String`:** A manual character buffer implementation that automatically wipes plaintext passwords from RAM (`memset` to zero) before freeing the heap memory to prevent memory scraping.
-- **Binary Serialization & Cryptography:** Data is not saved as plain text. It is serialized into a raw binary format (`std::fstream` in binary mode) and encrypted at rest using a modulo-based XOR cipher tied to the Master Password.
-- **Polymorphism:** The GUI interacts with a `Vault_Record` base class via pure virtual functions, eliminating the need for brittle `dynamic_cast` checks.
+* **Manual Memory Management:** Bypasses `std::vector` in favor of a custom-built `DynamicArray<T>` template class. Handles dynamic resizing and strict heap scrubbing to prevent memory leaks and data bleeding.
+* **Polymorphic Data Models:** Utilizes an Abstract Base Class (`Vault_Record`) to enforce a strict contract for `PasswordEntry` and `SecureNote` child classes, allowing both types to exist within a single dynamic array.
+* **Multi-Tenant Routing:** Dynamically generates and routes isolated binary files (`[username]_vault.dat`) for different users, preventing a single point of failure.
+* **Security & RAM Scrubbing:** Implements XOR encryption for file storage and features an aggressive memory scrub that manually deletes heap pointers upon user logout to secure local RAM.
+* **Custom Exception Pipeline:** Replaces standard error codes with a custom exception hierarchy (`AuthException`, `Bad_Alloc`, `DuplicateEntryException`) to gracefully trap and handle runtime failures.
+* **Operator Overloading:** Implements custom `==` and `<<` operators for strict duplicate entry prevention and stream formatting.
 
-## Build Instructions (Visual Studio 2022)
+## File Structure
 
-Because the project relies on Raylib and standard C file I/O operations, you need to configure a few settings in Visual Studio to compile it successfully.
+The architecture strictly adheres to separation of concerns (declarations in `.h`, definitions in `.cpp`), resulting in 13 atomic files:
 
-1. **Install Raylib:** - Open your project in VS 2022.
-   - Go to `Project` -> `Manage NuGet Packages`.
-   - Search for `raylib` (by v_2samg) and click Install.
-2. **Add Raygui:**
-   - Download the single `raygui.h` header file from the official raygui repository.
-   - Drop it directly into your project's header files folder.
-3. **Disable MSVC Security Warnings:**
-   - MSVC will block `raygui.h` from compiling due to standard C functions like `fopen`.
-   - Right-click your **Project** (not the Solution) -> `Properties`.
-   - Go to `C/C++` -> `Preprocessor`.
-   - Add `_CRT_SECURE_NO_WARNINGS` to the Preprocessor Definitions.
-4. **Compile and Run** (F5).
+**Application Entry**
+* `main.cpp` - Raylib UI state machine and event loop.
 
-## Usage Notes
-- **First-time run:** The app will ask you to create a Master Password. This creates the initial `vault.dat` file.
-- **Don't forget your Master Password.** Since encryption is tied directly to the password hash, there is no "Forgot Password" recovery option. If you lose it, the `vault.dat` file remains permanently locked as binary gibberish.
+**Core Engine**
+* `VaultManager.h` / `VaultManager.cpp` - Central controller for multi-user routing, encryption, and file I/O.
+* `DynamicArray_Holder.h` - Custom template array for dynamic heap allocation.
 
----
-*Disclaimer: This is an academic project built for educational purposes regarding manual memory management and basic cryptography.*
+**Data Models**
+* `Vault_Record.h` - Abstract Base Class interface.
+* `PasswordEntry.h` / `PasswordEntry.cpp` - Implementation for credential storage.
+* `SecureNote.h` / `SecureNote.cpp` - Implementation for multi-line text storage.
+* `PasswordString.h` / `PasswordString.cpp` - Low-level char buffer management for sensitive strings.
+
+**Exception Handling**
+* `Exceptions.h` / `Exceptions.cpp` - Custom error routing hierarchy.
+
+## Compilation & Build Instructions
+
+This project requires a C++ compiler (MSVC, GCC, or Clang) and the **Raylib** library for UI rendering.
+
+### Dependencies
+* [Raylib](https://www.raylib.com/) (Graphics framework)
+* `raygui.h` (Immediate-mode GUI header for Raylib)
+
+### Building with MSVC (Visual Studio)
+1. Open your Visual Studio Solution.
+2. Ensure all `.cpp` files are added to the **Source Files** folder.
+3. Ensure all `.h` files are added to the **Header Files** folder.
+4. Verify Raylib is properly linked in your project properties (Include Directories and Library Directories).
+5. Build and Run (F5).
+
+## Security Warning
+This vault utilizes a basic XOR cipher for local file obfuscation. It is designed as an architectural demonstration of C++ systems programming, not as a production-ready replacement for enterprise password managers with AES-256 encryption.
