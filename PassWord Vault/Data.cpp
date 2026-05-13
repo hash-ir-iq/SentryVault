@@ -27,8 +27,10 @@ void PasswordEntry::displayInfo() const {
     std::cout << "URL: " << URL << std::endl;
 }
 
+
+// Title duplicate check
 bool PasswordEntry::operator==(const Vault_Record& other) const {
-    //if the Title already exists, block it.
+
     return (this->title == other.Get_Title());
 }
 
@@ -91,7 +93,7 @@ std::string SecureNote::Get_Title() const {
     return title; 
 }
 
-//note dosnt have a username or URL, so return empty strings
+//note dosnt have username, URL, retrn empty string
 std::string SecureNote::Get_Username() const { 
     return ""; 
 }
@@ -103,7 +105,7 @@ std::string SecureNote::Get_Content() const {
     return content; 
 }
 
-// Display
+
 void SecureNote::displayInfo() const {
     std::cout << "--- SECURE NOTE ---\n";
     std::cout << "Title: " << title << "\n";
@@ -111,9 +113,7 @@ void SecureNote::displayInfo() const {
     std::cout << "-------------------\n";
 }
 
-// Operator == for Duplicate Checking
 bool SecureNote::operator==(const Vault_Record& other) const {
-    // Blocks notes from having the exact same title as another note or password
     return (this->title == other.Get_Title());
 }
 

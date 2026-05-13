@@ -7,23 +7,25 @@
 
 VaultManager::VaultManager() : is_Unlocked(false), failed_attempts(0) {}
 
-
 VaultManager::~VaultManager() {
-    for (int i = 0; i < Entries_array.Get_Size(); i++) {
-        delete Entries_array[i];
+    while (Entries_array.Get_Size() > 0) {
+        int last_idx = Entries_array.Get_Size() - 1;
+        delete Entries_array[last_idx];
+        Entries_array.RemoveEntry(last_idx);
     }
 }
 
-
+//Cipher
 void VaultManager::encrypt_Decrypt(char* data, int size, const std::string& key) {
     int keyLen = (int)key.length();
-    if (keyLen == 0)
+    if (keyLen == 0) 
         return;
     for (int i = 0; i < size; i++)
         data[i] ^= key[i % keyLen];
 }
 
-bool VaultManager::Create_Vault(const std::string& master_pass) {
+bool VaultManager::Create_Vault(const std::string& username, const std::string& master_pass) {
+    current_username = username;
     Hashed_Master_Password = std::to_string(std::hash<std::string>{}(master_pass));
     Temp_Master_Key = master_pass;
     is_Unlocked = true;
@@ -31,58 +33,69 @@ bool VaultManager::Create_Vault(const std::string& master_pass) {
     return true;
 }
 
-void VaultManager::LoadHash() {
-    std::ifstream file("vault.dat", std::ios::binary);
-    if (!file.is_open())
-        return;
+bool VaultManager::Login(const std::string& username, const std::string& input_pass) {
+    //Dynamically search for the specific user's vault
+    std::string filename = username + "_vault.dat";
+    std::ifstream file(filename, std::ios::binary);
+
+    if (!file.is_open()) {
+        throw AuthException("CRITICAL: Vault not found for this username!", 0);
+    }
 
     int hash_len = 0;
     file.read(reinterpret_cast<char*>(&hash_len), sizeof(int));
-    if (hash_len <= 0 || hash_len > 512)
-        return;
+    if (hash_len <= 0 || hash_len > 512) {
+        file.close();
+        throw AuthException("CRITICAL: Vault file corrupted!", 0);
+    }
 
     Hashed_Master_Password.resize(hash_len);
     file.read(&Hashed_Master_Password[0], hash_len);
-}
+    file.close();
 
-bool VaultManager::Login(const std::string& input_pass) {
     std::string input_hash = std::to_string(std::hash<std::string>{}(input_pass));
 
     if (input_hash == Hashed_Master_Password) {
         is_Unlocked = true;
+        current_username = username;
         Temp_Master_Key = input_pass;
         failed_attempts = 0;
         return true;
     }
+
     failed_attempts++;
     throw AuthException("CRITICAL: Incorrect Master Password!", failed_attempts);
 }
 
 void VaultManager::Logout() {
-    SaveVault();
+    if (is_Unlocked) SaveVault();
+
     is_Unlocked = false;
     Temp_Master_Key = "";
+    current_username = "";
+
+    while (Entries_array.Get_Size() > 0) {
+        int last_idx = Entries_array.Get_Size() - 1;
+        delete Entries_array[last_idx];
+        Entries_array.RemoveEntry(last_idx);
+    }
 }
 
-
 void VaultManager::Add_Entry(Vault_Record* ptr) {
-    if (!is_Unlocked)
+    if (!is_Unlocked) 
         return;
 
-    
     for (int i = 0; i < Entries_array.Get_Size(); i++) {
-
         if (*Entries_array[i] == *ptr) {
             delete ptr;
-            throw DuplicateEntryException("Entry with this Title and Username already exists!");
+            throw DuplicateEntryException("Entry with this Title already exists!");
         }
     }
-
     Entries_array.AddEntry(ptr);
 }
 
 void VaultManager::Delete_Entry(int index) {
-    if (!is_Unlocked)
+    if (!is_Unlocked) 
         return;
     if (index >= 0 && index < Entries_array.Get_Size()) {
         delete Entries_array[index];
@@ -95,7 +108,7 @@ DynamicArray<Vault_Record*>& VaultManager::GetArray() {
 }
 
 void VaultManager::SaveVault() {
-    if (!is_Unlocked || Temp_Master_Key.empty())
+    if (!is_Unlocked || Temp_Master_Key.empty() || current_username.empty())
         return;
 
     std::ofstream tempOut("temp.dat", std::ios::binary | std::ios::trunc);
@@ -103,12 +116,8 @@ void VaultManager::SaveVault() {
     tempOut.write(reinterpret_cast<char*>(&total), sizeof(int));
 
     for (int i = 0; i < total; i++) {
-
-        // Writing ID (1 for Password, 2 for Note) BEFORE writing the data
         int type = Entries_array[i]->Get_Type();
         tempOut.write(reinterpret_cast<char*>(&type), sizeof(int));
-
-        // Now serialize the actual data
         Entries_array[i]->serialize(tempOut);
     }
     tempOut.close();
@@ -123,7 +132,10 @@ void VaultManager::SaveVault() {
 
     encrypt_Decrypt(buf, dataSize, Temp_Master_Key);
 
-    std::ofstream out("vault.dat", std::ios::binary | std::ios::trunc);
+    //Save directly to specific user's file
+    std::string filename = current_username + "_vault.dat";
+    std::ofstream out(filename, std::ios::binary | std::ios::trunc);
+
     int hash_len = (int)Hashed_Master_Password.length();
     out.write(reinterpret_cast<char*>(&hash_len), sizeof(int));
     out.write(Hashed_Master_Password.c_str(), hash_len);
@@ -136,7 +148,12 @@ void VaultManager::SaveVault() {
 }
 
 void VaultManager::LoadVault() {
-    std::ifstream file("vault.dat", std::ios::binary | std::ios::ate);
+    if (current_username.empty())
+        return;
+
+    //Load from  specific user's file
+    std::string filename = current_username + "_vault.dat";
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
     if (!file.is_open())
         return;
 
@@ -169,7 +186,6 @@ void VaultManager::LoadVault() {
     tempIn.read(reinterpret_cast<char*>(&total), sizeof(int));
 
     for (int i = 0; i < total; i++) {
-        //read the type ID first to know what object to construct
         int type = 0;
         tempIn.read(reinterpret_cast<char*>(&type), sizeof(int));
 

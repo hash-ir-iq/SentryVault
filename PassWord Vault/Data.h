@@ -18,15 +18,12 @@ public:
     virtual void serialize(std::ostream& file) = 0;
     virtual void deserialize(std::istream& file) = 0;
 
-    //overloaded == for duplicate checking
     virtual bool operator==(const Vault_Record& other) const = 0;
 
-    //polymorphic Type ID for Factory Loading
     virtual int Get_Type() const = 0;
 
     virtual ~Vault_Record() {};
 
-    //overloaded << for formatted output
     friend std::ostream& operator<<(std::ostream& os, const Vault_Record& record) {
         record.displayInfo();
         return os;

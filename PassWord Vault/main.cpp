@@ -41,7 +41,9 @@ std::string WrapText(const std::string& text, int max_chars, int& line_count) {
     return wrapped;
 }
 
+// SCREEN WELCOME 
 enum GUI_State {
+    SCREEN_WELCOME,
     SCREEN_SETUP,
     SCREEN_LOGIN,
     SCREEN_DASHBOARD,
@@ -51,49 +53,44 @@ enum GUI_State {
 int main() {
     VaultManager MyVault;
 
-    bool vault_exists = false;
-    {
-        std::ifstream check("vault.dat", std::ios::binary);
-        vault_exists = check.good();
-    }
-
-    if (vault_exists)
-        MyVault.LoadHash();
-
-
-    InitWindow(1366, 768, "Secure Password Vault");
+    InitWindow(1366, 768, "Secure Password Vault - Multi-User");
     SetTargetFPS(60);
 
-    GUI_State current_screen = vault_exists ? SCREEN_LOGIN : SCREEN_SETUP;
+   
+    GUI_State current_screen = SCREEN_WELCOME;
 
+    //Login
+    char login_user_buffer[128] = "";
+    bool is_login_user_active = false;
     char login_pass_buffer[128] = "";
     bool is_pass_box_active = false;
     std::string error_message = "";
 
+    //Setup 
+    char setup_user_buf[128] = "";
+    bool setup_user_active = false;
     char setup_pass_buf[128] = "";
     bool setup_pass_active = false;
     char setup_confirm_buf[128] = "";
     bool setup_confirm_active = false;
     std::string setup_error = "";
 
+    // Entry
     char title_buf[128] = "";
     bool title_active = false;
-
     char user_buf[128] = "";
     bool user_active = false;
-
     char url_buf[128] = "";
     bool url_active = false;
-
     char Pass_buf[128] = "";
     bool Pass_active = false;
-
     bool is_secure_note = false;
     char content_buf[512] = "";
     bool content_active = false;
 
     std::string duplicate_error = "";
     int item_to_show = -1;
+    int copied_item_index = -1;
 
     while (!WindowShouldClose()) {
 
@@ -102,31 +99,51 @@ int main() {
 
         switch (current_screen) {
 
+        case SCREEN_WELCOME: {
+            DrawText("Welcome to Secure Vault", 500, 200, 30, DARKBLUE);
+            DrawText("Select an option to proceed.", 540, 250, 18, DARKGRAY);
+
+            if (GuiButton(Rectangle{ 530.0f, 320.0f, 300.0f, 50.0f }, "LOGIN TO EXISTING VAULT")) {
+                current_screen = SCREEN_LOGIN;
+            }
+
+            if (GuiButton(Rectangle{ 530.0f, 390.0f, 300.0f, 50.0f }, "CREATE NEW VAULT")) {
+                current_screen = SCREEN_SETUP;
+            }
+            break;
+        }
+
         case SCREEN_SETUP: {
+            DrawText("Create a New Vault", 530, 100, 30, DARKBLUE);
 
-            DrawText("First-Time Setup", 530, 150, 30, DARKBLUE);
-            DrawText("Choose a master password for your vault.", 440, 200, 18, DARKGRAY);
+            DrawText("Vault Username:", 430, 180, 20, BLACK);
+            if (GuiTextBox(Rectangle{ 640.0f, 175.0f, 260.0f, 35.0f }, setup_user_buf, 128, setup_user_active))
+                setup_user_active = !setup_user_active;
 
-            DrawText("New Password:", 430, 260, 20, BLACK);
-            if (GuiTextBox(Rectangle{ 640.0f, 255.0f, 260.0f, 35.0f }, setup_pass_buf, 128, setup_pass_active))
+            DrawText("Master Password:", 430, 235, 20, BLACK);
+            if (GuiTextBox(Rectangle{ 640.0f, 230.0f, 260.0f, 35.0f }, setup_pass_buf, 128, setup_pass_active))
                 setup_pass_active = !setup_pass_active;
 
-            DrawText("Confirm Password:", 430, 315, 20, BLACK);
-            if (GuiTextBox(Rectangle{ 640.0f, 310.0f, 260.0f, 35.0f }, setup_confirm_buf, 128, setup_confirm_active))
+            DrawText("Confirm Password:", 430, 290, 20, BLACK);
+            if (GuiTextBox(Rectangle{ 640.0f, 285.0f, 260.0f, 35.0f }, setup_confirm_buf, 128, setup_confirm_active))
                 setup_confirm_active = !setup_confirm_active;
 
-            if (GuiButton(Rectangle{ 580.0f, 380.0f, 200.0f, 40.0f }, "CREATE VAULT")) {
+            if (GuiButton(Rectangle{ 580.0f, 360.0f, 200.0f, 40.0f }, "CREATE VAULT")) {
+                std::string u(setup_user_buf);
                 std::string p1(setup_pass_buf);
                 std::string p2(setup_confirm_buf);
 
-                if (p1.empty()) 
+                if (u.empty())
+                    setup_error = "Username cannot be empty.";
+                else if (p1.empty())
                     setup_error = "Password cannot be empty.";
-                else if (p1 != p2) 
+                else if (p1 != p2)
                     setup_error = "Passwords do not match.";
                 else {
-                    MyVault.Create_Vault(p1);
+                    MyVault.Create_Vault(u, p1);
                     MyVault.SaveVault();
 
+                    memset(setup_user_buf, 0, 128);
                     memset(setup_pass_buf, 0, 128);
                     memset(setup_confirm_buf, 0, 128);
                     setup_error = "";
@@ -134,37 +151,52 @@ int main() {
                 }
             }
 
-            if (!setup_error.empty())
-                DrawText(setup_error.c_str(), 480, 440, 20, RED);
+            if (GuiButton(Rectangle{ 580.0f, 420.0f, 200.0f, 30.0f }, "BACK")) {
+                current_screen = SCREEN_WELCOME;
+            }
 
+            if (!setup_error.empty()) 
+                DrawText(setup_error.c_str(), 480, 470, 20, RED);
             break;
         }
 
         case SCREEN_LOGIN: {
-            DrawText("Secure Vault Login", 530, 200, 30, DARKGRAY);
+            DrawText("Secure Vault Login", 530, 150, 30, DARKGRAY);
 
-            if (GuiTextBox(Rectangle{ 530.0f, 300.0f, 300.0f, 40.0f }, login_pass_buffer, 128, is_pass_box_active))
+            DrawText("Username:", 430, 240, 20, BLACK);
+            if (GuiTextBox(Rectangle{ 550.0f, 235.0f, 300.0f, 40.0f }, login_user_buffer, 128, is_login_user_active))
+                is_login_user_active = !is_login_user_active;
+
+            DrawText("Password:", 430, 310, 20, BLACK);
+            if (GuiTextBox(Rectangle{ 550.0f, 305.0f, 300.0f, 40.0f }, login_pass_buffer, 128, is_pass_box_active))
                 is_pass_box_active = !is_pass_box_active;
 
-            if (GuiButton(Rectangle{ 580.0f, 370.0f, 200.0f, 40.0f }, "LOGIN")) {
+            if (GuiButton(Rectangle{ 580.0f, 380.0f, 200.0f, 40.0f }, "LOGIN")) {
                 try {
+                    std::string typed_user(login_user_buffer);
                     std::string typed_pass(login_pass_buffer);
-                    if (MyVault.Login(typed_pass)) {
+
+                    if (MyVault.Login(typed_user, typed_pass)) {
                         MyVault.LoadVault();
                         current_screen = SCREEN_DASHBOARD;
                         error_message = "";
                         item_to_show = -1;
+                        copied_item_index = -1;
                     }
                 }
                 catch (AuthException& e) {
                     error_message = e.what();
-                    error_message += " (Attempts: " + std::to_string(e.Get_Attempts()) + ")";
+                    if (e.Get_Attempts() > 0) 
+                        error_message += " (Attempts: " + std::to_string(e.Get_Attempts()) + ")";
                 }
             }
 
-            if (!error_message.empty())
-                DrawText(error_message.c_str(), 480, 430, 20, RED);
+            if (GuiButton(Rectangle{ 580.0f, 440.0f, 200.0f, 30.0f }, "BACK")) {
+                current_screen = SCREEN_WELCOME;
+                error_message = "";
+            }
 
+            if (!error_message.empty()) DrawText(error_message.c_str(), 480, 490, 20, RED);
             break;
         }
 
@@ -172,14 +204,16 @@ int main() {
             DrawText("Vault Dashboard", 50, 30, 30, DARKBLUE);
 
             if (GuiButton(Rectangle{ 1210.0f, 30.0f, 100.0f, 30.0f }, "Logout")) {
-                MyVault.Logout();
-                current_screen = SCREEN_LOGIN;
+                MyVault.Logout(); // Saves file and triggers the RAM scrub
+                current_screen = SCREEN_WELCOME;
                 memset(login_pass_buffer, 0, 128);
+                memset(login_user_buffer, 0, 128);
             }
 
             if (GuiButton(Rectangle{ 50.0f, 80.0f, 160.0f, 30.0f }, "+ Add New Entry")) {
                 duplicate_error = "";
                 is_secure_note = false;
+                copied_item_index = -1;
                 current_screen = SCREEN_ADD_ENTRY;
             }
 
@@ -215,21 +249,29 @@ int main() {
 
                         int lines = 1;
                         std::string wrapped = WrapText(sn->Get_Content(), 65, lines);
-
                         DrawText(wrapped.c_str(), 380, y_pos, 18, RED);
-
-                        if (lines > 1) {
+                        if (lines > 1)
                             row_height = 30 + ((lines - 1) * 20);
-                        }
                     }
                 }
                 else {
-                    if (arr[i]->Get_Type() == 1) {
+                    if (arr[i]->Get_Type() == 1)
                         DrawText(arr[i]->Get_URL().c_str(), 380, y_pos, 18, DARKGRAY);
-                    }
-                    else {
+                    else
                         DrawText("[SECURE NOTE]", 380, y_pos, 18, DARKGRAY);
+                }
+
+                const char* copy_btn_text = (copied_item_index == i) ? "Copied!" : "Copy";
+                if (GuiButton(Rectangle{ 1030.0f, (float)y_pos - 4, 72.0f, 24.0f }, copy_btn_text)) {
+                    if (arr[i]->Get_Type() == 1) {
+                        PasswordEntry* pe = dynamic_cast<PasswordEntry*>(arr[i]);
+                        SetClipboardText(pe->Get_Password().Get_SecureString_Ptr());
                     }
+                    else if (arr[i]->Get_Type() == 2) {
+                        SecureNote* sn = dynamic_cast<SecureNote*>(arr[i]);
+                        SetClipboardText(sn->Get_Content().c_str());
+                    }
+                    copied_item_index = i;
                 }
 
                 if (GuiButton(Rectangle{ 1110.0f, (float)y_pos - 4, 72.0f, 24.0f }, "View")) {
@@ -239,12 +281,11 @@ int main() {
                 if (GuiButton(Rectangle{ 1190.0f, (float)y_pos - 4, 65.0f, 24.0f }, "Delete")) {
                     MyVault.Delete_Entry(i);
                     item_to_show = -1;
+                    copied_item_index = -1;
                     break;
                 }
-
                 y_pos += row_height;
             }
-
             break;
         }
 
@@ -259,7 +300,7 @@ int main() {
 
             if (!is_secure_note) {
                 DrawText("Username:", 50, 170, 20, BLACK);
-                if (GuiTextBox(Rectangle{ 150.0f, 165.0f, 300.0f, 30.0f }, user_buf, 128, user_active))
+                if (GuiTextBox(Rectangle{ 150.0f, 165.0f, 300.0f, 30.0f }, user_buf, 128, user_active)) 
                     user_active = !user_active;
 
                 DrawText("URL:", 50, 220, 20, BLACK);
@@ -318,7 +359,6 @@ int main() {
         }
 
         } 
-
         EndDrawing();
     }
 

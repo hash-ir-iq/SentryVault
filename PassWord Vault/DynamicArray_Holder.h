@@ -99,7 +99,7 @@ public:
 };
 
 
-//Using templates
+//templates
 
 template<typename T>
 void custom_swap(T& a, T& b) {

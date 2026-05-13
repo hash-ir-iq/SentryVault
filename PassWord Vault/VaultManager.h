@@ -9,6 +9,9 @@ class VaultManager {
 private:
     DynamicArray<Vault_Record*> Entries_array;
     bool        is_Unlocked;
+
+    std::string current_username;
+
     std::string Hashed_Master_Password;
     std::string Temp_Master_Key;
     int         failed_attempts;
@@ -19,9 +22,8 @@ public:
     VaultManager();
     ~VaultManager();
 
-    bool Create_Vault(const std::string& master_pass);
-    void LoadHash();
-    bool Login(const std::string& input_pass);
+    bool Create_Vault(const std::string& username, const std::string& master_pass);
+    bool Login(const std::string& username, const std::string& input_pass);
     void Logout();
 
     void Add_Entry(Vault_Record* ptr);
